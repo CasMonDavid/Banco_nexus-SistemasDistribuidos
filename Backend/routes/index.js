@@ -63,10 +63,7 @@ router.post('/api/deposito', async (req, res) => {
 
         const [result] = await conn.query('SELECT saldo FROM cuentas WHERE id = ?',[cuenta_id]);
         if (result.length===0) {
-            return res.status(500).json({
-                status: false,
-                message: 'No existe la cuenta especificada'
-            })
+            throw new Error("No existe la cuenta especificada")
         }
 
         await conn.execute('UPDATE cuentas SET saldo = saldo + ? WHERE id = ?',[monto, cuenta_id])
@@ -87,6 +84,44 @@ router.post('/api/deposito', async (req, res) => {
         return res.status(500).json({
             status: false,
             message: 'Ocurrio un error en el servidor al intentar hacer el deposito'
+        })
+    }
+})
+
+router.post('/api/retirar', async (req, res) => {
+    const { cuenta_id, monto, sucursal } = req.body;
+    const fecha = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const conn = await connection.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        const [result] = await conn.query('SELECT saldo FROM cuentas WHERE id = ?',[cuenta_id]);
+        if (result.length===0) {
+            throw new Error("La cuenta no existe")
+        }
+        if (result[0].saldo < monto) {
+            throw new Error("La cantidad de retiro es mayor al saldo disponible")
+        }
+
+        await conn.execute('UPDATE cuentas SET saldo = saldo - ? WHERE id = ?',[monto, cuenta_id])
+
+        await conn.execute('INSERT INTO transacciones (cuenta_id, tipo, monto, fecha, sucursal) VALUES (?,?,?,?,?)',
+            [cuenta_id,'Retiro',monto, fecha, sucursal]);
+
+        await conn.commit();
+        
+        res.json({
+            status: true,
+            message: 'Retiro exitoso'
+        })
+        
+    } catch (error) {
+        await conn.rollback();
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Ocurrio un error en el servidor al intentar hacer el retiro'
         })
     }
 })
