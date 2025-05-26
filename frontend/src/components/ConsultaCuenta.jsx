@@ -9,51 +9,63 @@ export default function ConsultaTransacciones() {
   const [sucursales, setSucursales] = useState({});
 
   async function consultarTransacciones() {
-    setError(null);
-    setDatos(null);
-    setMensaje(null);
+  setError(null);
+  setDatos(null);
+  setMensaje(null);
 
-    if (!clienteId.trim()) {
-      setError("Por favor ingresa el ID del cliente");
-      return;
-    }
-
-    try {
-      const res = await fetch(`http://localhost:4000/api/cuenta/${clienteId.trim()}`);
-
-      if (!res.ok) throw new Error("Cliente no encontrado o error en el servidor");
-      const data = await res.json();
-
-      const cuentasMap = new Map();
-
-      data.forEach((row) => {
-        if (!cuentasMap.has(row.cuenta_id)) {
-          cuentasMap.set(row.cuenta_id, {
-            cuenta_id: row.cuenta_id,
-            numero_cuenta: row.numero_cuenta,
-            saldo: row.saldo,
-            tipo_cuenta: row.tipo_cuenta,
-            transacciones: [],
-          });
-        }
-
-        if (row.transaccion_id) {
-          cuentasMap.get(row.cuenta_id).transacciones.push({
-            transaccion_id: row.transaccion_id,
-            tipo_transaccion: row.tipo_transaccion,
-            monto: row.monto,
-            fecha: row.fecha,
-            sucursal: row.sucursal || "No especificada", // AGREGADO
-          });
-        }
-      });
-
-      const cuentasAgrupadas = Array.from(cuentasMap.values());
-      setDatos(cuentasAgrupadas);
-    } catch (err) {
-      setError(err.message);
-    }
+  if (!clienteId.trim()) {
+    setError("Por favor ingresa el ID del cliente");
+    return;
   }
+
+  try {
+    const res = await fetch(`http://localhost:4000/api/cuenta/${clienteId.trim()}`);
+
+    const contentType = res.headers.get("content-type");
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error("Error: " + errorText);
+    }
+
+    if (!contentType || !contentType.includes("application/json")) {
+      const html = await res.text();
+      throw new Error("Respuesta inesperada del servidor: " + html.slice(0, 100));
+    }
+
+    const data = await res.json();
+
+    const cuentasMap = new Map();
+
+    data.forEach((row) => {
+      if (!cuentasMap.has(row.cuenta_id)) {
+        cuentasMap.set(row.cuenta_id, {
+          cuenta_id: row.cuenta_id,
+          numero_cuenta: row.numero_cuenta,
+          saldo: row.saldo,
+          tipo_cuenta: row.tipo_cuenta,
+          transacciones: [],
+        });
+      }
+
+      if (row.transaccion_id) {
+        cuentasMap.get(row.cuenta_id).transacciones.push({
+          transaccion_id: row.transaccion_id,
+          tipo_transaccion: row.tipo_transaccion,
+          monto: row.monto,
+          fecha: row.fecha,
+          sucursal: row.sucursal || "No especificada",
+        });
+      }
+    });
+
+    const cuentasAgrupadas = Array.from(cuentasMap.values());
+    setDatos(cuentasAgrupadas);
+  } catch (err) {
+    console.error("Error al consultar transacciones:", err.message);
+    setError("❌ No se pudieron obtener las transacciones. " + err.message);
+  }
+}
+
 
   function handleMontoChange(cuentaId, valor) {
     setMontos((prev) => ({ ...prev, [cuentaId]: valor }));
