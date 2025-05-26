@@ -168,7 +168,7 @@ export default function ConsultaTransacciones() {
                 >
                   Depositar
                 </button>
-                <button onClick={() => realizarOperacion(registro.cuenta_id, "retiro")}>
+                <button onClick={() => realizarOperacion(registro.cuenta_id, "retirar")}>
                   Retirar
                 </button>
               </div>

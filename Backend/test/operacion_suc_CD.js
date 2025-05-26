@@ -2,7 +2,7 @@ const axios = require('axios');
 
 async function operarCDMX() {
   try {
-    const res = await axios.post('http://localhost:3000/api/retirar', {
+    const res = await axios.post('http://localhost:4000/api/retirar', {
       cuenta_id: 1,
       monto: 175,
       sucursal: 'CDMX'

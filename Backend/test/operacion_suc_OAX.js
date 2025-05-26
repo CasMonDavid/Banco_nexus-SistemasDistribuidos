@@ -2,7 +2,7 @@ const axios = require('axios');
 
 async function operarOAX() {
   try {
-    const res = await axios.post('http://localhost:3000/api/deposito', {
+    const res = await axios.post('http://localhost:4000/api/deposito', {
       cuenta_id: 4,
       monto: 225,
       sucursal: 'OAX'
