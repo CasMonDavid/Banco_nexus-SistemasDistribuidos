@@ -6,6 +6,7 @@ export default function ConsultaTransacciones() {
   const [error, setError] = useState(null);
   const [mensaje, setMensaje] = useState(null);
   const [montos, setMontos] = useState({});
+  const [sucursales, setSucursales] = useState({});
 
   async function consultarTransacciones() {
     setError(null);
@@ -42,6 +43,7 @@ export default function ConsultaTransacciones() {
             tipo_transaccion: row.tipo_transaccion,
             monto: row.monto,
             fecha: row.fecha,
+            sucursal: row.sucursal || "No especificada", // AGREGADO
           });
         }
       });
@@ -57,8 +59,13 @@ export default function ConsultaTransacciones() {
     setMontos((prev) => ({ ...prev, [cuentaId]: valor }));
   }
 
+  function handleSucursalChange(cuentaId, valor) {
+    setSucursales((prev) => ({ ...prev, [cuentaId]: valor }));
+  }
+
   async function realizarOperacion(cuentaId, tipo) {
     const monto = montos[cuentaId];
+    const sucursal = sucursales[cuentaId] || "Sucursal Central";
 
     if (!monto || isNaN(monto) || parseFloat(monto) <= 0) {
       setMensaje(`Ingresa un monto válido para ${tipo}`);
@@ -72,7 +79,7 @@ export default function ConsultaTransacciones() {
         body: JSON.stringify({
           cuenta_id: cuentaId,
           monto: parseFloat(monto),
-          sucursal: "Sucursal Central",
+          sucursal: sucursal,
         }),
       });
 
@@ -121,8 +128,20 @@ export default function ConsultaTransacciones() {
                   : "N/A"}
               </h3>
 
-              {/* Nuevo diseño de acciones */}
               <div style={{ marginBottom: "1rem" }}>
+                <select
+                  value={sucursales[registro.cuenta_id] || ""}
+                  onChange={(e) => handleSucursalChange(registro.cuenta_id, e.target.value)}
+                  style={{ marginRight: "0.5rem" }}
+                >
+                  <option value="">Selecciona sucursal</option>
+                  <option value="Sucursal Central">Sucursal Central</option>
+                  <option value="Sucursal Norte">Sucursal Norte</option>
+                  <option value="Sucursal Sur">Sucursal Sur</option>
+                  <option value="Sucursal Este">Sucursal Este</option>
+                  <option value="Sucursal Oeste">Sucursal Oeste</option>
+                </select>
+
                 <input
                   type="number"
                   placeholder="Monto"
@@ -130,6 +149,7 @@ export default function ConsultaTransacciones() {
                   onChange={(e) => handleMontoChange(registro.cuenta_id, e.target.value)}
                   style={{ marginRight: "0.5rem" }}
                 />
+
                 <button
                   onClick={() => realizarOperacion(registro.cuenta_id, "deposito")}
                   style={{ marginRight: "0.5rem" }}
@@ -148,6 +168,7 @@ export default function ConsultaTransacciones() {
                       <th>Tipo</th>
                       <th>Monto</th>
                       <th>Fecha</th>
+                      <th>Sucursal</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -160,6 +181,7 @@ export default function ConsultaTransacciones() {
                             : "Sin monto"}
                         </td>
                         <td>{new Date(t.fecha).toLocaleString()}</td>
+                        <td>{t.sucursal}</td>
                       </tr>
                     ))}
                   </tbody>
