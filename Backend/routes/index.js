@@ -53,5 +53,42 @@ router.get('/api/cuenta/:id', async (req, res, next) => {
 });
 
 //CRUD DE TRANSACCIONES
+router.post('/api/deposito', async (req, res) => {
+    const { cuenta_id, monto, sucursal } = req.body;
+    const fecha = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const conn = await connection.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        const [result] = await conn.query('SELECT saldo FROM cuentas WHERE id = ?',[cuenta_id]);
+        if (result.length===0) {
+            return res.status(500).json({
+                status: false,
+                message: 'No existe la cuenta especificada'
+            })
+        }
+
+        await conn.execute('UPDATE cuentas SET saldo = saldo + ? WHERE id = ?',[monto, cuenta_id])
+
+        await conn.execute('INSERT INTO transacciones (cuenta_id, tipo, monto, fecha, sucursal) VALUES (?,?,?,?,?)',
+            [cuenta_id,'Deposito',monto, fecha, sucursal]);
+
+        await conn.commit();
+        
+        res.json({
+            status: true,
+            message: 'Deposito exitoso'
+        })
+        
+    } catch (error) {
+        await conn.rollback();
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Ocurrio un error en el servidor al intentar hacer el deposito'
+        })
+    }
+})
 
 module.exports = router;
