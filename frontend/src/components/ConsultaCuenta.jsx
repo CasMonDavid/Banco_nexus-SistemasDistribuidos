@@ -4,10 +4,13 @@ export default function ConsultaTransacciones() {
   const [clienteId, setClienteId] = useState("");
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
+  const [mensaje, setMensaje] = useState(null);
+  const [montos, setMontos] = useState({});
 
   async function consultarTransacciones() {
     setError(null);
     setDatos(null);
+    setMensaje(null);
 
     if (!clienteId.trim()) {
       setError("Por favor ingresa el ID del cliente");
@@ -20,7 +23,6 @@ export default function ConsultaTransacciones() {
       if (!res.ok) throw new Error("Cliente no encontrado o error en el servidor");
       const data = await res.json();
 
-      // Agrupar datos por cuenta
       const cuentasMap = new Map();
 
       data.forEach((row) => {
@@ -51,6 +53,40 @@ export default function ConsultaTransacciones() {
     }
   }
 
+  function handleMontoChange(cuentaId, valor) {
+    setMontos((prev) => ({ ...prev, [cuentaId]: valor }));
+  }
+
+  async function realizarOperacion(cuentaId, tipo) {
+    const monto = montos[cuentaId];
+
+    if (!monto || isNaN(monto) || parseFloat(monto) <= 0) {
+      setMensaje(`Ingresa un monto válido para ${tipo}`);
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:4000/api/${tipo}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cuenta_id: cuentaId,
+          monto: parseFloat(monto),
+          sucursal: "Sucursal Central",
+        }),
+      });
+
+      const resultado = await res.json();
+
+      if (!res.ok) throw new Error(resultado.error || "Error en la operación");
+
+      setMensaje(`✅ ${tipo === "deposito" ? "Depósito" : "Retiro"} exitoso`);
+      consultarTransacciones();
+    } catch (err) {
+      setMensaje(`❌ ${err.message}`);
+    }
+  }
+
   return (
     <div style={{ maxWidth: "800px", margin: "auto", padding: "1rem" }}>
       <h2>Consulta de Transacciones por Cliente</h2>
@@ -70,6 +106,7 @@ export default function ConsultaTransacciones() {
       </button>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
+      {mensaje && <p style={{ color: mensaje.startsWith("✅") ? "green" : "red" }}>{mensaje}</p>}
 
       {datos && datos.length > 0 && (
         <>
@@ -83,6 +120,26 @@ export default function ConsultaTransacciones() {
                   ? `$${Number(registro.saldo).toFixed(2)}`
                   : "N/A"}
               </h3>
+
+              {/* Nuevo diseño de acciones */}
+              <div style={{ marginBottom: "1rem" }}>
+                <input
+                  type="number"
+                  placeholder="Monto"
+                  value={montos[registro.cuenta_id] || ""}
+                  onChange={(e) => handleMontoChange(registro.cuenta_id, e.target.value)}
+                  style={{ marginRight: "0.5rem" }}
+                />
+                <button
+                  onClick={() => realizarOperacion(registro.cuenta_id, "deposito")}
+                  style={{ marginRight: "0.5rem" }}
+                >
+                  Depositar
+                </button>
+                <button onClick={() => realizarOperacion(registro.cuenta_id, "retiro")}>
+                  Retirar
+                </button>
+              </div>
 
               {registro.transacciones.length > 0 ? (
                 <table border="1" cellPadding="5" style={{ width: "100%" }}>
